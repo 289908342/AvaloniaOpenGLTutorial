@@ -34,7 +34,7 @@ namespace Tutorial4
             protected override void OnOpenGlDeinit(GlInterface gl, int fb)
             {
                 base.OnOpenGlDeinit(gl, fb);
-                
+
                 gl.BindBuffer(GL_ARRAY_BUFFER, 0);
                 gl.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
                 gl.BindVertexArray(0);
@@ -45,10 +45,10 @@ namespace Tutorial4
                 gl.DeleteProgram(_shaderProgram);
                 gl.DeleteShader(_fragmentShader);
                 gl.DeleteShader(_vertexShader);
-                
+
                 gl.CheckError();
             }
-            
+
             void ConfigureShaders(GlInterface gl)
             {
                 _shaderProgram = gl.CreateProgram();
@@ -64,21 +64,23 @@ namespace Tutorial4
             void CreateFragmentShader(GlInterface gl)
             {
                 _fragmentShader = gl.CreateShader(GL_FRAGMENT_SHADER);
-                Console.WriteLine(gl.CompileShaderAndGetError(_fragmentShader, FragmentShaderSource));
+                var s = gl.CompileShaderAndGetError(_fragmentShader, FragmentShaderSource);
+                Console.WriteLine(s);
                 gl.AttachShader(_shaderProgram, _fragmentShader);
             }
 
             void CreateVertexShader(GlInterface gl)
             {
                 _vertexShader = gl.CreateShader(GL_VERTEX_SHADER);
-                Console.WriteLine(gl.CompileShaderAndGetError(_vertexShader, VertexShaderSource));
+                var s = gl.CompileShaderAndGetError(_vertexShader, VertexShaderSource);
+                Console.WriteLine(s);
                 gl.AttachShader(_shaderProgram, _vertexShader);
             }
 
             protected override void OnOpenGlRender(GlInterface gl, int fb)
             {
                 gl.ClearColor(0, 0, 0, 1);
-                gl.Clear( GL_COLOR_BUFFER_BIT);
+                gl.Clear(GL_COLOR_BUFFER_BIT);
 
                 gl.Viewport(0, 0, (int)Bounds.Width, (int)Bounds.Height);
 
@@ -90,15 +92,15 @@ namespace Tutorial4
             {
                 Vector3[] vertices = new Vector3[]
                 {
-                    new Vector3(-1f, -1f, 0.0f),
-                    new Vector3(1f, -1f, 0.0f),
-                    new Vector3(0.0f, 1f, 0.0f),
+                    new Vector3(-0.5f, -0.5f, 0.0f), new Vector3(1f, 0f, 0f),
+                    new Vector3(0.5f, -0.5f, 0.0f), new Vector3(0f, 1f, 0f),
+                    new Vector3(0.0f, 0.5f, 0.0f), new Vector3(0f, 0f, 1f),
                 };
 
                 _vbo = gl.GenBuffer();
                 gl.BindBuffer(GL_ARRAY_BUFFER, _vbo);
 
-                fixed(void* pVertices = vertices)
+                fixed (void* pVertices = vertices)
                     gl.BufferData(GL_ARRAY_BUFFER, new IntPtr(sizeof(Vector3) * vertices.Length),
                     new IntPtr(pVertices), GL_STATIC_DRAW);
 
@@ -106,25 +108,35 @@ namespace Tutorial4
                 gl.BindVertexArray(_vao);
 
                 gl.VertexAttribPointer(
-                    0, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), IntPtr.Zero);
+                    0, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vector3), IntPtr.Zero);
                 gl.EnableVertexAttribArray(0);
+                gl.VertexAttribPointer(
+                    1, 3, GL_FLOAT, GL_FALSE, 2 * sizeof(Vector3), new IntPtr(sizeof(Vector3)));
+                gl.EnableVertexAttribArray(1);
             }
 
+            // HELPME: 参考自 https://learnopengl-cn.github.io/01%20Getting%20started/05%20Shaders/#_5
+            // 但采用 #Version 或 layout 语法，着色器编译时都会有报错，采用 layout，报错信息为："ERROR: 0:3: 'location' : syntax error syntax error\n\n"
+            string VertexShaderSource => GlExtensions.GetShader(GlVersion, false, @"
+                //layout(location = 0) in vec3 Position;
+                //layout(location = 1) in vec3 fragColor;
 
-            string VertexShaderSource => GlExtensions.GetShader(GlVersion, false, @" 
                 in vec3 Position;
+                out vec3 myColor;
 
                 void main()
                 {
-                    gl_Position = vec4(0.5 * Position.x, 0.5 * Position.y, Position.z, 1.0);
+                    gl_Position = vec4(Position, 1.0);
+                    myColor = vec3(0,0,1);
                 }
             ");
             string FragmentShaderSource => GlExtensions.GetShader(GlVersion, true, @"
                 out vec4 FragColor;
+                in vec3 myColor;
 
                 void main()
                 {
-                    FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                    FragColor = vec4(myColor, 1.0);
                 }
             ");
 
