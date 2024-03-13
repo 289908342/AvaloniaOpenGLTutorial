@@ -77,8 +77,8 @@ namespace Tutorial3
 
             protected override void OnOpenGlRender(GlInterface gl, int fb)
             {
-                gl.ClearColor(0, 0, 0, 1);
-                gl.Clear( GL_COLOR_BUFFER_BIT);
+                gl.ClearColor(0, 0.8f, 0.5f, 0.5f);
+                gl.Clear(GL_COLOR_BUFFER_BIT);
 
                 gl.Viewport(0, 0, (int)Bounds.Width, (int)Bounds.Height);
 
@@ -90,15 +90,16 @@ namespace Tutorial3
             {
                 Vector3[] vertices = new Vector3[]
                 {
-                    new Vector3(-1f, -1f, 0.0f),
-                    new Vector3(1f, -1f, 0.0f),
-                    new Vector3(0.0f, 1f, 0.0f),
+                    new Vector3(-0.5f, -0.5f, 0.0f),
+                    new Vector3(0.5f, -0.5f, 0.0f),
+                    new Vector3(0.0f, 0.5f, 0.0f),
                 };
 
                 _vbo = gl.GenBuffer();
                 gl.BindBuffer(GL_ARRAY_BUFFER, _vbo);
 
-                fixed(void* pVertices = vertices)
+                // 固定顶点数据的内存位置，防止垃圾回收器移动数据（因为我们需要其内存地址）
+                fixed (void* pVertices = vertices)
                     gl.BufferData(GL_ARRAY_BUFFER, new IntPtr(sizeof(Vector3) * vertices.Length),
                     new IntPtr(pVertices), GL_STATIC_DRAW);
 
@@ -110,22 +111,28 @@ namespace Tutorial3
                 gl.EnableVertexAttribArray(0);
             }
 
-
+            // 参考自 https://learnopengl-cn.github.io/01%20Getting%20started/05%20Shaders/#_4
+            // 顶点着色器中传递一个变量给片段着色器，用于控制颜色输出
             string VertexShaderSource => GlExtensions.GetShader(GlVersion, false, @" 
                 in vec3 Position;
+                out vec3 fragPos; // 传递给片段着色器的变量
 
                 void main()
                 {
                     gl_Position = vec4(Position.x, Position.y, Position.z, 1.0);
+                    fragPos = Position;
                 }
             ");
             string FragmentShaderSource => GlExtensions.GetShader(GlVersion, true, @"
                 out vec4 FragColor;
-              
+                in vec3 fragPos; // 从顶点着色器传递过来的位置信息
+
                 void main()
                 {
-                    FragColor = vec4(1, 0, 1, 1);
-                } 
+                    // 使用 fragPos 的 x 分量来计算颜色
+                    float mixFactor = (fragPos.x + 1.0) / 2.0; // 将 x 分量从 [-1,1] 映射到 [0,1]
+                    FragColor = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0), mixFactor);
+                }
             ");
 
             int _vbo;
