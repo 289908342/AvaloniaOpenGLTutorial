@@ -17,6 +17,7 @@ namespace Tutorial3
         // Avalonia configuration, don't remove; also used by visual designer.
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
+                .With(new Win32PlatformOptions { UseWgl = true })
                 .UsePlatformDetect()
                 .LogToTrace();
     }
